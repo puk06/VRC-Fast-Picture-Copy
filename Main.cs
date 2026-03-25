@@ -7,7 +7,7 @@ namespace VRC_Fast_Picture_Copy
     {
         private string pictureDirectory = "";
         private string newestFile = "";
-        private FileSystemWatcher watcher;
+        private FileSystemWatcher? watcher = null;
 
         public Main()
         {
@@ -33,49 +33,53 @@ namespace VRC_Fast_Picture_Copy
                 $"C:\\Users\\{username}\\OneDrive\\Pictures\\VRChat"
             };
 
-            foreach (var path in possiblePaths)
-            {
-                if (Directory.Exists(path))
-                {
-                    pictureDirectory = path;
-                }
-            }
+            pictureDirectory = possiblePaths.FirstOrDefault(Directory.Exists) ?? "";
 
             string configPath = $"C:\\Users\\{username}\\AppData\\Locallow\\VRChat\\VRChat\\config.json";
-            if (File.Exists(configPath))
-            {
-                var configData = JsonSerializer.Deserialize<Dictionary<string, object>>(File.ReadAllText(configPath)) ?? new();
-                if (configData.TryGetValue("picture_output_folder", out var value))
-                {
-                    pictureDirectory = value.ToString() ?? pictureDirectory;
-                }
-            }
-
-            if (File.Exists("./folder.json"))
-            {
-                var folderData = JsonSerializer.Deserialize<Dictionary<string, object>>(File.ReadAllText("./folder.json")) ?? new();
-                if (folderData.TryGetValue("picture_output_folder", out var value))
-                {
-                    pictureDirectory = value.ToString() ?? pictureDirectory;
-                }
-            }
+            pictureDirectory = GetPicturePathFromJson(configPath) ?? pictureDirectory;
+            pictureDirectory = GetPicturePathFromJson("./folder.json") ?? pictureDirectory;
 
             if (string.IsNullOrEmpty(pictureDirectory))
             {
-                MessageBox.Show("写真フォルダが見つかりませんでした。フォルダを選択してください。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                FolderBrowserDialog dialog = new FolderBrowserDialog()
-                {
-                    Description = "写真フォルダを選択してください。"
-                };
+                BrowseForFolder();
+            }
 
+            FolderLabel.Text = $"写真フォルダ: {pictureDirectory}";
+        }
+
+        private string? GetPicturePathFromJson(string filePath)
+        {
+            if (!File.Exists(filePath))
+                return null;
+
+            try
+            {
+                var jsonData = JsonSerializer.Deserialize<Dictionary<string, object>>(File.ReadAllText(filePath));
+                return jsonData?.TryGetValue("picture_output_folder", out var value) == true
+                    ? value.ToString()
+                    : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private void BrowseForFolder()
+        {
+            MessageBox.Show("写真フォルダが見つかりませんでした。フォルダを選択してください。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            
+            using (FolderBrowserDialog dialog = new FolderBrowserDialog()
+            {
+                Description = "写真フォルダを選択してください。"
+            })
+            {
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
                     pictureDirectory = dialog.SelectedPath;
                     File.WriteAllText("./folder.json", JsonSerializer.Serialize(new Dictionary<string, object> { { "picture_output_folder", pictureDirectory } }));
                 }
             }
-
-            FolderLabel.Text = $"写真フォルダ: {pictureDirectory}";
         }
 
         private void InitializeFileWatcher()
@@ -83,9 +87,10 @@ namespace VRC_Fast_Picture_Copy
             watcher = new FileSystemWatcher(pictureDirectory, "*.*")
             {
                 EnableRaisingEvents = true,
-                IncludeSubdirectories = true
+                IncludeSubdirectories = true,
+                NotifyFilter = NotifyFilters.LastWrite
             };
-            watcher.Changed += (sender, e) => UpdateNewestFile(e.FullPath);
+            watcher.Changed += (_, e) => UpdateNewestFile(e.FullPath);
         }
 
         private void UpdateNewestFile(string? newFilePath = null)
@@ -114,21 +119,18 @@ namespace VRC_Fast_Picture_Copy
 
         private void button1_Click(object sender, EventArgs e)
         {
+            if (string.IsNullOrEmpty(newestFile) || !File.Exists(newestFile))
+            {
+                UpdateNewestFile();
+            }
+
             if (!string.IsNullOrEmpty(newestFile) && File.Exists(newestFile))
             {
                 SetImageToClipboard(newestFile);
             }
             else
             {
-                UpdateNewestFile();
-                if (!string.IsNullOrEmpty(newestFile) && File.Exists(newestFile))
-                {
-                    SetImageToClipboard(newestFile);
-                }
-                else
-                {
-                    MessageBox.Show("最新のファイルが見つかりませんでした。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                MessageBox.Show("最新のファイルが見つかりませんでした。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

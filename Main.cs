@@ -134,14 +134,14 @@ namespace VRC_Fast_Picture_Copy
             }
         }
 
-        private void SetImageToClipboard(string path)
+        private static void SetImageToClipboard(string path)
         {
             try
             {
                 using Image img = Image.FromFile(path);
                 Clipboard.SetImage(img);
             }
-            catch (ExternalException) { }
+            catch (ExternalException) { /* ñ≥éã */ }
             catch (Exception e)
             {
                 MessageBox.Show($"ÉGÉâÅ[Ç™î≠ê∂ÇµÇ‹ÇµÇΩ: {e.Message}");

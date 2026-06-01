@@ -5,6 +5,18 @@ namespace VRC_Fast_Picture_Copy
 {
     public partial class Main : Form
     {
+        private static readonly HashSet<string> SupportedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".bmp",
+            ".gif",
+            ".jpeg",
+            ".jpg",
+            ".png",
+            ".tif",
+            ".tiff",
+            ".webp"
+        };
+
         private string pictureDirectory = "";
         private string newestFile = "";
         private FileSystemWatcher? watcher = null;
@@ -107,6 +119,7 @@ namespace VRC_Fast_Picture_Copy
             try
             {
                 return Directory.EnumerateFiles(pictureDirectory, "*", SearchOption.AllDirectories)
+                    .Where(IsSupportedImageFile)
                     .OrderByDescending(File.GetLastWriteTime)
                     .FirstOrDefault() ?? "";
             }
@@ -138,14 +151,26 @@ namespace VRC_Fast_Picture_Copy
         {
             try
             {
-                using Image img = Image.FromFile(path);
-                Clipboard.SetImage(img);
+                using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using Image img = Image.FromStream(stream);
+                using Bitmap bitmap = new(img);
+                Clipboard.SetImage(bitmap);
+            }
+            catch (OutOfMemoryException)
+            {
+                MessageBox.Show("画像を読み込めませんでした。書き込み中のファイルか、壊れた画像の可能性があります。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (ExternalException) { /* 無視 */ }
             catch (Exception e)
             {
                 MessageBox.Show($"エラーが発生しました: {e.Message}");
             }
+        }
+
+        private static bool IsSupportedImageFile(string path)
+        {
+            string extension = Path.GetExtension(path);
+            return SupportedImageExtensions.Contains(extension);
         }
     }
 }

@@ -89,7 +89,7 @@ namespace VRC_Fast_Picture_Copy
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
                     pictureDirectory = dialog.SelectedPath;
-                    File.WriteAllText("./folder.json", JsonSerializer.Serialize(new Dictionary<string, object> { { "picture_output_folder", pictureDirectory } }));
+                    File.WriteAllText("folder.json", JsonSerializer.Serialize(new Dictionary<string, object> { { "picture_output_folder", pictureDirectory } }));
                 }
             }
         }

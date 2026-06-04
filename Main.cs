@@ -96,7 +96,7 @@ namespace VRC_Fast_Picture_Copy
 
         private void InitializeFileWatcher()
         {
-            watcher = new FileSystemWatcher(pictureDirectory, "*.*")
+            watcher = new FileSystemWatcher(pictureDirectory, "*.png")
             {
                 EnableRaisingEvents = true,
                 IncludeSubdirectories = true,
